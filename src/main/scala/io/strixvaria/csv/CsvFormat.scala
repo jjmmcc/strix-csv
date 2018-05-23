@@ -21,7 +21,7 @@ case class CsvFormat(
 
   def parseLine(num: Int, line: String): Row =
     // TODO handle quotes
-    Row(line.split(",").map(_.trim), num)
+    Row(line.split(",").map(_.trim), Some(num))
 
   def writeLine(row: Row, out: Writer): Unit =
     writeLine(row.values, out)

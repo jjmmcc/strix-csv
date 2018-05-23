@@ -3,18 +3,7 @@ package io.strixvaria
 import scala.util.Failure
 
 package object csv {
-  type RowParser[A] = ValueFormat[Row, A]
 
-  implicit def rowParser[A](implicit format: ValueFormat[IndexedSeq[String], A]): RowParser[A] =
-    ValueFormat[Row, A](
-      row => 
-        format.to(row.values)
-          .recoverWith { case t => Failure[A](new ParseException(row.line, t)) },
-      a => format.from(a).map(Row(_))
-    )
-
-  implicit val rawRowParser: RowParser[Row] =
-    ValueFormat.success[Row, Row](identity(_), identity(_))
 }
 
 package csv {
