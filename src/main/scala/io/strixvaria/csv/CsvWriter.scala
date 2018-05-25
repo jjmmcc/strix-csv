@@ -1,29 +1,57 @@
 package io.strixvaria.csv
 
-import java.io.Writer
+import java.io.{Closeable, Writer}
+import scala.collection.mutable.ArrayBuffer
 import scala.util.Try
 
-case class CsvWriter[A](
-  out: Writer, 
-  valueFormat: ValueFormat[A, Seq[String]],
-  csvFormat: CsvFormat
-) {
-  def writeHeader(values: Seq[String]) =
-    csvFormat.writeLine(values, out)
+trait CsvWriter[A] extends Closeable {
+  protected val defaultHeader = layout.header
+  protected val columnCount = defaultHeader.size
 
-  def writeRow(row: A): Unit =
-    csvFormat.writeLine(valueFormat.to(row).get, out)
+  def layout: Layout[A]
 
-  def writeRows(rows: Stream[A]) =
-    rows.foreach(writeRow(_))
+  def writeDefaultHeader(): Unit = writeRow(defaultHeader)
 
-  def <~[B](f2: ValueFormat[B, A]): CsvWriter[B] =
-    copy(valueFormat = f2 ~> valueFormat)
+  /**
+   * Writes a raw `Row`, skipping formatting by `layout`.
+   */
+  def writeRow(row: Row): Unit
+
+  /**
+   * Writes a row by converting `x` to a `Row` using `layout`.
+   */
+  def write(x: A): Unit = {
+    val buf = RowBuffer(columnCount)
+    buf.write(x, layout)
+    writeRow(buf)
+  }
+
+  def writeAll(xs: TraversableOnce[A]): Unit =
+    xs.foreach(write)
 }
 
 object CsvWriter {
-  def apply[A](out: Writer, csvFormat: CsvFormat = CsvFormat.default)(
-    implicit valueFormat: ValueFormat[A, Seq[String]]
-  ): CsvWriter[A] =
-    CsvWriter(out, valueFormat, csvFormat)
+  def apply[A](
+    out: Writer, 
+    layout: Layout[A],
+    csvFormat: CsvFormat = CsvFormat.default
+  ): CsvWriter[A] = 
+    apply(
+      row => csvFormat.writeLine(row, out),
+      layout,
+      out
+    )
+
+  def apply[A](
+    consumer: Row => Unit,
+    layout: Layout[A],
+    closer: Closeable
+  ): CsvWriter[A] = {
+    val _layout = layout
+    new CsvWriter[A] {
+      override def layout = _layout
+      override def writeRow(row: Row): Unit = consumer(row)
+      override def close(): Unit = closer.close()
+    }
+  }
 }

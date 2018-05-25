@@ -1,17 +1,54 @@
 package io.strixvaria.csv
 
-import scala.collection.mutable.Buffer
+import scala.collection.mutable.ArrayBuffer
 import scala.util.{Try, Success, Failure}
 
-case class Row(values: IndexedSeq[String], lineNum: Option[Int] = None) {
-  lazy val cursor = ReadCursor(this)
+trait Row {
+  lazy val readCursor = ReadCursor(this)
+  def values: Seq[String]
+  def lineNum: Option[Int] = None
   def size: Int = values.size
   def apply(idx: Int): String = values(idx)
+  def read[A](layout: Layout[A]): Try[A] = Try(layout()(readCursor))
 }
 
-case class RowBuffer(values: Buffer[String]) {
-  def size: Int = values.size
-  def update(idx: Int, v: String): Unit = values(idx) = v
+object Row {
+  def apply(values: String*): Row = Row(values.toIndexedSeq)
+
+  def apply(seq: IndexedSeq[String], lineNum: Option[Int] = None): Row = {
+    val _lineNum = lineNum
+    new Row { 
+      override def values = seq
+      override def lineNum = _lineNum
+    }
+  }
+}
+
+trait RowBuffer extends Row {
+  lazy val writeCursor = WriteCursor(this)
+
+  def update(idx: Int, v: String): Unit
+
+  def write[A](x: A, layout: Layout[A]): Unit =
+    (layout := x)(writeCursor)
+}
+
+object RowBuffer {
+  def apply(size: Int): RowBuffer = {
+    val buf = new ArrayBuffer[String](size)
+    var i = 0
+    while (i < size) {
+      buf += ""
+      i += 1
+    }
+    RowBuffer(buf)
+  }
+
+  def apply(buf: ArrayBuffer[String]): RowBuffer =
+    new RowBuffer { 
+      override def values: Seq[String] = buf
+      override def update(idx: Int, v: String): Unit = buf(idx) = v
+    }
 }
 
 sealed trait ReadCursor {
@@ -24,9 +61,6 @@ sealed trait ReadCursor {
 
   def read[A](offset: Int)(implicit f: ValueFormat[String, A]): Try[A] = 
     this(offset).flatMap(f.to)
-
-  def read[A](layout: Layout[A]): Try[A] =
-    Try(layout()(this))
 
   def slice(from: Int, until: Int): ReadCursor
 }

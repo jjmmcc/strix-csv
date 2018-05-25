@@ -7,14 +7,11 @@ case class CsvFormat(
   lineBreak: String = "\r\n"
 ) {
 
-  def read(file: File): Stream[Row] =
-    read(Source.fromFile(file))
-
-  def read(src: Source): Stream[Row] =
+  def read(src: Source): Iterator[Row] =
     // this could be wrong if newline is enclosed in quotes
-    read(src.getLines().toStream)
+    read(src.getLines())
 
-  def read(lines: Stream[String]): Stream[Row] =
+  def read(lines: Iterator[String]): Iterator[Row] =
     lines.zipWithIndex.map {
       case (line, idx) => parseLine(idx + 1, line)
     }
@@ -23,8 +20,7 @@ case class CsvFormat(
     // TODO handle quotes
     Row(line.split(",").map(_.trim), Some(num))
 
-  def writeLine(row: Row, out: Writer): Unit =
-    writeLine(row.values, out)
+  def writeLine(row: Row, out: Writer): Unit = writeLine(row.values, out)
 
   def writeLine(values: Seq[String], out: Writer): Unit = {
     var i = 0

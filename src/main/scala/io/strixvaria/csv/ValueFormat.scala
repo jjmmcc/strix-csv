@@ -61,25 +61,6 @@ object ValueFormat {
   def handle[A, B](to: A => B, from: B => A): ValueFormat[A, B] =
     ValueFormat(x => Try(to(x)), y => Try(from(y)))
 
-  def product[A, B, C, Z <: Product2[B, C]](
-    bf: ValueFormat[A, B], 
-    cf: ValueFormat[A, C],
-    to: (B, C) => Try[Z],
-  ): ValueFormat[Seq[A], Z] =
-    ValueFormat[Seq[A], Z](
-      cols => 
-        for {
-          b <- bf.to(cols(0))
-          c <- cf.to(cols(1))
-          z <- to(b, c)
-        } yield z,
-      z =>
-        for {
-          v0 <- bf.from(z._1)
-          v1 <- cf.from(z._2)
-        } yield Seq(v0, v1)
-    )
-
   case class OneWayException(value: Any) 
     extends Exception("Format is one-way, cannot covert: " + value)
 }

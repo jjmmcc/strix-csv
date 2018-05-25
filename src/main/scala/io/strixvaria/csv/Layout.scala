@@ -1,8 +1,25 @@
 package io.strixvaria.csv
 
-abstract class Layout[A] {
+import scala.util.Try
+
+sealed abstract class Layout[A] {
+  def header: Row = throw new UnsupportedOperationException
+
   def apply()(implicit cursor: ReadCursor): A
   def :=(x: A)(implicit cursor: WriteCursor): Unit
+}
+
+object Layout {
+  object Raw extends Layout[Row] {
+    override def header: Row = throw new UnsupportedOperationException
+  
+    def apply()(implicit cursor: ReadCursor): Row = cursor.row
+
+    def :=(x: Row)(implicit cursor: WriteCursor): Unit =
+      for (i <- 0.until(x.size)) {
+        cursor(i) = x(i)
+      }
+  }
 }
 
 trait Column[A] extends Layout[A] {
@@ -37,12 +54,14 @@ private[csv] case class BoundColumn[T, A](
     cursor.write[A](offset, x).get
 }
 
-abstract class ColumnSet[A]() extends Layout[A] {
+abstract class ColumnSet[A] extends Layout[A] {
   private var subs = Vector.empty[Sublayout[A, _]]
   private var nextOffset: Int = 0
 
   def columnCount: Int = nextOffset
   def columnNames: Seq[String] = subs.flatMap(_.columnNames)
+
+  override def header: Row = Row(columnNames.toIndexedSeq)
 
   def add[B](
     name: String,
@@ -86,13 +105,4 @@ private[csv] case class BoundColumnSet[T, A](
 
   override def :=(x: A)(implicit cursor: WriteCursor): Unit =
     columnSet.:=(x)(cursor.slice(offset, offset + columnSet.columnCount))
-}
-
-object RawLayout extends Layout[Row] {
-  def apply()(implicit cursor: ReadCursor): Row = cursor.row
-
-  def :=(x: Row)(implicit cursor: WriteCursor): Unit =
-    for (i <- 0.until(x.size)) {
-      cursor(i) = x(i)
-    }
 }
