@@ -25,7 +25,7 @@ trait CsvReader[A] extends Closeable {
 
   /**
    * Returns a new `CsvReader` with a different `Layout`, but reading from the same
-   * underlying `Iterator`.  This can be used if you dynamically determine the layout
+   * underlying `Iterator`.  This can be useful if you dynamically determine the layout
    * by first reading the header.
    */
   def withLayout[B](layout: Layout[B]): CsvReader[B] =

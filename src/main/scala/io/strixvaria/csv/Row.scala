@@ -3,11 +3,27 @@ package io.strixvaria.csv
 import scala.collection.mutable.ArrayBuffer
 import scala.util.{Try, Success, Failure}
 
+/**
+ * `Row` encapsulates the raw `String` values of a single row in a CSV file.
+ */
 trait Row {
   lazy val readCursor = ReadCursor(this)
+
+  /**
+   * The raw `String` values in the row.
+   */
   def values: Seq[String]
-  def lineNum: Option[Int] = None
+
+  /**
+   * The number of values (columns) in this `Row`.
+   */
   def size: Int = values.size
+
+  /**
+   * When reading `Row`s via `CsvReader`, `lineNum` will be set.  Line numbers
+   * start at 1.
+   */
+  def lineNum: Option[Int] = None
   def apply(idx: Int): String = values(idx)
   def read[A](layout: Layout[A]): Try[A] = Try(layout()(readCursor))
 }

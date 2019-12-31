@@ -17,27 +17,30 @@ case class ValueFormat[A, B](
 
 object ValueFormat {
   implicit val StringToString = 
-    ValueFormat[String, String](
-      s => Success(s),
-      s => Success(s)
-    )
+    ValueFormat.success[String, String](identity[String], identity[String])
  
   implicit val StringToBoolean = 
     ValueFormat[String, Boolean](
       s => Try(s.toBoolean),
-      b => Success(b.toString)
+      v => Success(v.toString)
     )
  
   implicit val StringToInt = 
     ValueFormat[String, Int](
       s => Try(s.toInt),
-      i => Success(i.toString)
+      v => Success(v.toString)
     )
  
   implicit val StringToLong = 
     ValueFormat[String, Long](
       s => Try(s.toLong),
-      l => Success(l.toString)
+      v => Success(v.toString)
+    )
+
+  implicit val StringToDouble = 
+    ValueFormat[String, Double](
+      s => Try(s.toDouble),
+      v => Success(v.toString)
     )
 
   def to[A, B](x: A)(implicit f: ValueFormat[A, B]): Try[B] = f.to(x)
